@@ -19,6 +19,29 @@ export default function Dashboard() {
     queryKey: ["/api/me"]
   });
 
+  useEffect(() => {
+    // Handle hash changes to update the active tab
+    const handleHashChange = () => {
+      const hash = window.location.hash.substring(1);
+      if (hash === 'route' || hash === 'schedule' || hash === 'inventory' || hash === 'stops') {
+        setActiveTab(hash as TabType);
+      } else if (hash === 'dashboard') {
+        setActiveTab('route'); // Default to route if dashboard is selected
+      }
+    };
+
+    // Set the initial tab based on URL hash
+    handleHashChange();
+
+    // Listen for hash changes
+    window.addEventListener('hashchange', handleHashChange);
+
+    // Clean up the event listener
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, []);
+
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };

@@ -59,33 +59,25 @@ export default function Sidebar({ isOpen, toggleSidebar, user }: SidebarProps) {
       </div>
       
       <nav className="mt-2">
-        <a href="#" className="flex items-center py-3 px-4 text-gray-600 hover:bg-gray-100">
+        <a href="#dashboard" className="flex items-center py-3 px-4 text-gray-600 hover:bg-gray-100">
           <i className="fas fa-tachometer-alt w-6 text-gray-500"></i>
           <span>Dashboard</span>
         </a>
-        <a href="#" className="flex items-center py-3 px-4 bg-gray-100 text-primary font-medium">
+        <a href="#route" className="flex items-center py-3 px-4 bg-gray-100 text-primary font-medium">
           <i className="fas fa-route w-6 text-primary"></i>
           <span>Route Planning</span>
         </a>
-        <a href="#" className="flex items-center py-3 px-4 text-gray-600 hover:bg-gray-100">
+        <a href="#schedule" className="flex items-center py-3 px-4 text-gray-600 hover:bg-gray-100">
           <i className="fas fa-calendar-alt w-6 text-gray-500"></i>
           <span>Schedule</span>
         </a>
-        <a href="#" className="flex items-center py-3 px-4 text-gray-600 hover:bg-gray-100">
+        <a href="#inventory" className="flex items-center py-3 px-4 text-gray-600 hover:bg-gray-100">
           <i className="fas fa-boxes w-6 text-gray-500"></i>
           <span>Inventory</span>
         </a>
-        <a href="#" className="flex items-center py-3 px-4 text-gray-600 hover:bg-gray-100">
+        <a href="#stops" className="flex items-center py-3 px-4 text-gray-600 hover:bg-gray-100">
           <i className="fas fa-gas-pump w-6 text-gray-500"></i>
           <span>Fuel & Rest Stops</span>
-        </a>
-        <a href="#" className="flex items-center py-3 px-4 text-gray-600 hover:bg-gray-100">
-          <i className="fas fa-file-alt w-6 text-gray-500"></i>
-          <span>Reports</span>
-        </a>
-        <a href="#" className="flex items-center py-3 px-4 text-gray-600 hover:bg-gray-100">
-          <i className="fas fa-cog w-6 text-gray-500"></i>
-          <span>Settings</span>
         </a>
       </nav>
       
