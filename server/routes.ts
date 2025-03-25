@@ -86,11 +86,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Middleware to check if user is authenticated
-  const isAuthenticated = (req: Request, res: Response, next: Function) => {
-    if (req.isAuthenticated()) {
+  // For demo purposes, we'll automatically authenticate the user with a demo account
+  const isAuthenticated = async (req: Request, res: Response, next: Function) => {
+    if (!req.user) {
+      // Get or create the demo user
+      let demoUser = await storage.getUserByUsername("demo");
+      
+      if (!demoUser) {
+        demoUser = await storage.createUser({
+          username: "demo",
+          password: "demo123",
+          name: "Demo Driver",
+          driverId: "DRV-001",
+          profileImage: null,
+          isActive: true
+        });
+      }
+      
+      // Manually authenticate the user
+      req.login(demoUser, (err) => {
+        if (err) {
+          return res.status(500).json({ error: "Authentication error" });
+        }
+        return next();
+      });
+    } else {
       return next();
     }
-    res.status(401).json({ error: "Not authenticated" });
   };
   
   // Inventory endpoints

@@ -42,7 +42,7 @@ export default function Sidebar({ isOpen, toggleSidebar, user }: SidebarProps) {
       <div className="p-4 border-b border-neutral-700">
         <div className="flex items-center space-x-2">
           <i className="fas fa-truck text-primary text-2xl"></i>
-          <h1 className="text-xl font-bold">TruckTrack</h1>
+          <h1 className="text-xl font-bold">Driver Dashboard</h1>
         </div>
       </div>
       
