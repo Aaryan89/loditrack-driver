@@ -91,7 +91,223 @@ export class MemStorage implements IStorage {
       isActive: true
     };
     
-    this.createUser(demoUser);
+    this.createUser(demoUser).then(user => {
+      // Create demo route
+      this.createRoute({
+        name: "Seattle to Portland Delivery",
+        date: new Date().toISOString().split('T')[0],
+        userId: user.id,
+        totalDistance: "174 miles",
+        estimatedTime: "3 hours 15 minutes",
+        deliveryCount: 4,
+        completion: 25
+      }).then(route => {
+        // Create delivery stops for the route
+        this.createDeliveryStop({
+          name: "Coffee Supply Co.",
+          address: "123 Pike St, Seattle, WA",
+          coordinates: "47.610378,-122.342090",
+          scheduledTime: "08:30 AM",
+          status: "completed",
+          items: ["Coffee beans", "Filters", "Cups"],
+          routeId: route.id
+        });
+        
+        this.createDeliveryStop({
+          name: "Organic Grocers",
+          address: "456 Pine Ave, Tacoma, WA",
+          coordinates: "47.252895,-122.444290",
+          scheduledTime: "10:15 AM",
+          status: "in-progress",
+          items: ["Fresh produce", "Dairy products"],
+          routeId: route.id
+        });
+        
+        this.createDeliveryStop({
+          name: "City Hospital",
+          address: "789 Medical Dr, Olympia, WA",
+          coordinates: "47.037872,-122.900695",
+          scheduledTime: "12:30 PM",
+          status: "pending",
+          items: ["Medical supplies", "Equipment"],
+          routeId: route.id
+        });
+        
+        this.createDeliveryStop({
+          name: "Riverside Restaurant",
+          address: "321 River Rd, Portland, OR",
+          coordinates: "45.523064,-122.676483",
+          scheduledTime: "2:45 PM",
+          status: "pending",
+          items: ["Food ingredients", "Kitchen supplies"],
+          routeId: route.id
+        });
+        
+        // Create rest/fuel stops
+        this.createStop({
+          name: "Highway Rest Stop",
+          type: "rest",
+          address: "I-5 Mile Marker 132, WA",
+          status: "scheduled",
+          routeId: route.id,
+          hours: "24/7",
+          distance: "65 miles from start",
+          features: ["Restrooms", "Vending machines", "Picnic area"],
+          pricing: null
+        });
+        
+        this.createStop({
+          name: "Cascade Fuel Station",
+          type: "fuel",
+          address: "2468 Cascade Hwy, Centralia, WA",
+          status: "scheduled",
+          routeId: route.id,
+          hours: "5:00 AM - 11:00 PM",
+          distance: "93 miles from start",
+          features: ["Diesel", "DEF", "Food mart", "Showers"],
+          pricing: {"Diesel": "$3.89/gal", "DEF": "$3.25/gal"}
+        });
+        
+        this.createStop({
+          name: "Green EV Charging",
+          type: "ev",
+          address: "135 Electric Ave, Vancouver, WA",
+          status: "scheduled",
+          routeId: route.id,
+          hours: "24/7",
+          distance: "160 miles from start",
+          features: ["Level 3 charging", "Lounge", "WiFi"],
+          pricing: {"Level 3": "$0.40/kWh", "Level 2": "$0.25/kWh"}
+        });
+      });
+      
+      // Create inventory items
+      this.createInventoryItem({
+        name: "Coffee beans (organic)",
+        category: "Food",
+        quantity: 20,
+        weight: 200,
+        location: "Truck section A1",
+        deadline: "2025-03-26",
+        userId: user.id
+      });
+      
+      this.createInventoryItem({
+        name: "Paper filters",
+        category: "Supplies",
+        quantity: 1000,
+        weight: 10,
+        location: "Truck section A2",
+        deadline: "2025-03-26",
+        userId: user.id
+      });
+      
+      this.createInventoryItem({
+        name: "Disposable cups",
+        category: "Supplies",
+        quantity: 500,
+        weight: 25,
+        location: "Truck section A3",
+        deadline: "2025-03-26",
+        userId: user.id
+      });
+      
+      this.createInventoryItem({
+        name: "Fresh produce (assorted)",
+        category: "Food",
+        quantity: 15,
+        weight: 150,
+        location: "Refrigerated section R1",
+        deadline: "2025-03-26",
+        userId: user.id
+      });
+      
+      this.createInventoryItem({
+        name: "Dairy products",
+        category: "Food",
+        quantity: 30,
+        weight: 100,
+        location: "Refrigerated section R2",
+        deadline: "2025-03-26",
+        userId: user.id
+      });
+      
+      this.createInventoryItem({
+        name: "Medical supplies",
+        category: "Healthcare",
+        quantity: 10,
+        weight: 50,
+        location: "Secure section S1",
+        deadline: "2025-03-26",
+        userId: user.id
+      });
+      
+      this.createInventoryItem({
+        name: "Medical equipment",
+        category: "Healthcare",
+        quantity: 5,
+        weight: 200,
+        location: "Secure section S2",
+        deadline: "2025-03-26",
+        userId: user.id
+      });
+      
+      // Create schedule entries
+      this.createScheduleEntry({
+        type: "delivery",
+        title: "Morning Deliveries",
+        date: new Date().toISOString().split('T')[0],
+        details: "Seattle and Tacoma stops",
+        startTime: "08:00 AM",
+        endTime: "12:00 PM",
+        userId: user.id
+      });
+      
+      this.createScheduleEntry({
+        type: "rest",
+        title: "Lunch Break",
+        date: new Date().toISOString().split('T')[0],
+        details: "Highway Rest Stop",
+        startTime: "12:00 PM",
+        endTime: "12:45 PM",
+        userId: user.id
+      });
+      
+      this.createScheduleEntry({
+        type: "delivery",
+        title: "Afternoon Deliveries",
+        date: new Date().toISOString().split('T')[0],
+        details: "Olympia and Portland stops",
+        startTime: "1:00 PM",
+        endTime: "5:00 PM",
+        userId: user.id
+      });
+      
+      // Tomorrow's entries
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowStr = tomorrow.toISOString().split('T')[0];
+      
+      this.createScheduleEntry({
+        type: "maintenance",
+        title: "Truck Maintenance",
+        date: tomorrowStr,
+        details: "Regular service check",
+        startTime: "08:00 AM",
+        endTime: "10:00 AM",
+        userId: user.id
+      });
+      
+      this.createScheduleEntry({
+        type: "delivery",
+        title: "Portland to Seattle Return",
+        date: tomorrowStr,
+        details: "Return trip with pickups",
+        startTime: "11:00 AM",
+        endTime: "4:00 PM",
+        userId: user.id
+      });
+    });
   }
 
   // User methods

@@ -17,7 +17,9 @@ export const users = pgTable("users", {
 export const inventoryItems = pgTable("inventory_items", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
+  category: text("category").notNull(),
   quantity: integer("quantity").notNull(),
+  weight: integer("weight").notNull(),
   location: text("location").notNull(),
   deadline: text("deadline").notNull(),
   userId: integer("user_id").notNull(),
@@ -28,9 +30,10 @@ export const deliveryStops = pgTable("delivery_stops", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   address: text("address").notNull(),
-  time: text("time").notNull(),
-  status: text("status").notNull(), // 'completed', 'current', 'upcoming'
-  itemCount: integer("item_count").notNull(),
+  coordinates: text("coordinates"),
+  scheduledTime: text("scheduled_time").notNull(),
+  status: text("status").notNull(), // 'completed', 'in-progress', 'pending'
+  items: json("items").$type<string[]>(),
   routeId: integer("route_id").notNull(),
 });
 
@@ -84,7 +87,9 @@ export const insertUserSchema = createInsertSchema(users).pick({
 
 export const insertInventoryItemSchema = createInsertSchema(inventoryItems).pick({
   name: true,
+  category: true,
   quantity: true,
+  weight: true,
   location: true,
   deadline: true,
   userId: true,
@@ -93,9 +98,10 @@ export const insertInventoryItemSchema = createInsertSchema(inventoryItems).pick
 export const insertDeliveryStopSchema = createInsertSchema(deliveryStops).pick({
   name: true,
   address: true,
-  time: true,
+  coordinates: true,
+  scheduledTime: true,
   status: true,
-  itemCount: true,
+  items: true,
   routeId: true,
 });
 
