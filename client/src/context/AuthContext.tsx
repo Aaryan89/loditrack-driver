@@ -1,15 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-
-interface User {
-  id: number;
-  username: string;
-  fullName: string;
-  role: string;
-  email?: string;
-  phoneNumber?: string;
-}
+import { User } from "@shared/schema";
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -31,23 +23,28 @@ export const useAuthContext = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { toast } = useToast();
 
-  // Check if user is already logged in (from local storage)
+  // Auto-authenticate with demo user
   useEffect(() => {
-    const storedUser = localStorage.getItem("truckLogisticsUser");
-    if (storedUser) {
+    const fetchDemoUser = async () => {
       try {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        setIsAuthenticated(true);
+        const response = await fetch('/api/me');
+        if (response.ok) {
+          const userData = await response.json();
+          setUser(userData);
+          setIsAuthenticated(true);
+        }
       } catch (error) {
-        console.error("Failed to parse stored user:", error);
-        localStorage.removeItem("truckLogisticsUser");
+        console.error("Auto-authentication failed:", error);
+      } finally {
+        setIsLoading(false);
       }
-    }
+    };
+    
+    fetchDemoUser();
   }, []);
 
   const login = async (username: string, password: string): Promise<boolean> => {
