@@ -13,7 +13,9 @@ interface AddInventoryModalProps {
 
 export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModalProps) {
   const [name, setName] = useState("");
+  const [category, setCategory] = useState("");
   const [quantity, setQuantity] = useState("");
+  const [weight, setWeight] = useState("");
   const [location, setLocation] = useState("");
   const [deadline, setDeadline] = useState("");
   
@@ -99,17 +101,47 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
           </div>
           
           <div className="mb-4">
-            <Label htmlFor="product-quantity" className="block text-sm font-medium text-neutral-700 mb-1">
-              Quantity
+            <Label htmlFor="product-category" className="block text-sm font-medium text-neutral-700 mb-1">
+              Category
             </Label>
             <Input
-              id="product-quantity"
-              type="number"
-              min="1"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
+              id="product-category"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              placeholder="Food, Supplies, Equipment, etc."
               required
             />
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="mb-4">
+              <Label htmlFor="product-quantity" className="block text-sm font-medium text-neutral-700 mb-1">
+                Quantity
+              </Label>
+              <Input
+                id="product-quantity"
+                type="number"
+                min="1"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                required
+              />
+            </div>
+            
+            <div className="mb-4">
+              <Label htmlFor="product-weight" className="block text-sm font-medium text-neutral-700 mb-1">
+                Weight (kg)
+              </Label>
+              <Input
+                id="product-weight"
+                type="number"
+                min="0.1"
+                step="0.1"
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
+                required
+              />
+            </div>
           </div>
           
           <div className="mb-4">

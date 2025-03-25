@@ -48,15 +48,16 @@ export default function InventoryTab() {
     });
   };
   
-  // Mock inventory items until we get data from the API
-  const mockItems: InventoryItem[] = [
-    { id: 1, name: 'Electronics Bundle XL', quantity: 12, location: 'Compartment A', deadline: '2023-07-15', userId: 1 },
-    { id: 2, name: 'Furniture Set #42', quantity: 3, location: 'Trailer Section B', deadline: '2023-07-14', userId: 1 },
-    { id: 3, name: 'Medical Supplies Kit', quantity: 8, location: 'Secure Box C', deadline: '2023-07-13', userId: 1 },
-    { id: 4, name: 'Food Packages (Refrigerated)', quantity: 24, location: 'Cooler Unit', deadline: '2023-07-12', userId: 1 }
+  // Test inventory items until we get data from the API
+  const testItems: InventoryItem[] = [
+    { id: 1, name: 'Coffee beans (organic)', category: 'Food', quantity: 20, weight: 200, location: 'Truck section A1', deadline: '2025-03-26', userId: 1 },
+    { id: 2, name: 'Paper filters', category: 'Supplies', quantity: 1000, weight: 10, location: 'Truck section A2', deadline: '2025-03-26', userId: 1 },
+    { id: 3, name: 'Disposable cups', category: 'Supplies', quantity: 500, weight: 25, location: 'Truck section A3', deadline: '2025-03-26', userId: 1 },
+    { id: 4, name: 'Fresh produce (assorted)', category: 'Food', quantity: 15, weight: 150, location: 'Refrigerated section R1', deadline: '2025-03-25', userId: 1 },
+    { id: 5, name: 'Dairy products', category: 'Food', quantity: 30, weight: 100, location: 'Refrigerated section R2', deadline: '2025-03-24', userId: 1 }
   ];
   
-  const items = inventoryItems || mockItems;
+  const items = inventoryItems || testItems;
   
   // Function to determine the status class based on deadline
   const getDeadlineStatusClass = (deadline: string) => {
@@ -79,13 +80,23 @@ export default function InventoryTab() {
       </div>
       
       {/* Inventory Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-neutral-50 p-4 rounded-lg border border-neutral-200">
           <p className="text-sm text-neutral-600">Total Items</p>
           <div className="flex items-center mt-1">
             <i className="fas fa-box-open text-primary text-xl mr-3"></i>
             <span className="text-2xl font-medium">
               {items.reduce((sum, item) => sum + item.quantity, 0)}
+            </span>
+          </div>
+        </div>
+        
+        <div className="bg-neutral-50 p-4 rounded-lg border border-neutral-200">
+          <p className="text-sm text-neutral-600">Total Weight</p>
+          <div className="flex items-center mt-1">
+            <i className="fas fa-weight-hanging text-primary text-xl mr-3"></i>
+            <span className="text-2xl font-medium">
+              {items.reduce((sum, item) => sum + item.weight, 0)} kg
             </span>
           </div>
         </div>
@@ -102,7 +113,7 @@ export default function InventoryTab() {
           <p className="text-sm text-neutral-600">Upcoming Deliveries</p>
           <div className="flex items-center mt-1">
             <i className="fas fa-dolly text-primary text-xl mr-3"></i>
-            <span className="text-2xl font-medium">8</span>
+            <span className="text-2xl font-medium">3</span>
           </div>
         </div>
       </div>
@@ -116,8 +127,14 @@ export default function InventoryTab() {
                 <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
                   Product Name
                 </th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
+                  Category
+                </th>
                 <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-neutral-600 uppercase tracking-wider">
                   Quantity
+                </th>
+                <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-neutral-600 uppercase tracking-wider">
+                  Weight (kg)
                 </th>
                 <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
                   Location
@@ -134,7 +151,13 @@ export default function InventoryTab() {
               {items.map(item => (
                 <tr key={item.id} className="border-b border-neutral-200">
                   <td className="py-3 px-4">{item.name}</td>
+                  <td className="py-3 px-4">
+                    <span className="px-2 py-1 text-xs rounded-full bg-neutral-100">
+                      {item.category}
+                    </span>
+                  </td>
                   <td className="py-3 px-4 text-center">{item.quantity}</td>
+                  <td className="py-3 px-4 text-center">{item.weight}</td>
                   <td className="py-3 px-4">{item.location}</td>
                   <td className={`py-3 px-4 ${getDeadlineStatusClass(item.deadline)}`}>{item.deadline}</td>
                   <td className="py-3 px-4 text-right">

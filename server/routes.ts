@@ -7,8 +7,10 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { z } from "zod";
 import { 
-  insertInventoryItemSchema, 
-  insertDeliveryStopSchema, 
+  insertInventoryItemSchema,
+  insertInventoryItemSchemaForApi,
+  insertDeliveryStopSchema,
+  insertDeliveryStopSchemaForApi,
   insertRouteSchema, 
   insertStopSchema, 
   insertScheduleEntrySchema
