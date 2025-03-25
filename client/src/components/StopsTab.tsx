@@ -88,7 +88,7 @@ export default function StopsTab() {
   });
 
   return (
-    <div id="stops-tab" data-tab-content className="bg-white rounded-lg shadow-md p-4 mb-6 hidden">
+    <div id="stops-tab" data-tab-content className="bg-white rounded-lg shadow-md p-4 mb-6">
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-lg font-semibold">Rest & Refuel Stops</h3>
         <div className="flex space-x-2">

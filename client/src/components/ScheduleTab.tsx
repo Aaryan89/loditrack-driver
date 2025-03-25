@@ -93,7 +93,7 @@ export default function ScheduleTab() {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-4 mb-6 hidden">
+    <div className="bg-white rounded-lg shadow-md p-4 mb-6">
       <div className="flex flex-col md:flex-row gap-6">
         {/* Calendar View */}
         <div className="w-full md:w-2/3">

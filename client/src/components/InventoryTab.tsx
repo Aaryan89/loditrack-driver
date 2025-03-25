@@ -71,7 +71,7 @@ export default function InventoryTab() {
   };
 
   return (
-    <div id="inventory-tab" data-tab-content className="bg-white rounded-lg shadow-md p-4 mb-6 hidden">
+    <div id="inventory-tab" data-tab-content className="bg-white rounded-lg shadow-md p-4 mb-6">
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-lg font-semibold">Truck Inventory Management</h3>
         <Button onClick={() => setIsModalOpen(true)}>

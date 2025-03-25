@@ -50,7 +50,9 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
   
   const resetForm = () => {
     setName("");
+    setCategory("");
     setQuantity("");
+    setWeight("");
     setLocation("");
     setDeadline("");
   };
@@ -58,7 +60,7 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name || !quantity || !location || !deadline) {
+    if (!name || !category || !quantity || !weight || !location || !deadline) {
       toast({
         title: "Missing fields",
         description: "Please fill in all the required fields",
@@ -69,7 +71,9 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
     
     addInventoryItem.mutate({
       name,
+      category,
       quantity: parseInt(quantity),
+      weight: parseFloat(weight),
       location,
       deadline
     });
