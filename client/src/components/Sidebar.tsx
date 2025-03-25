@@ -35,66 +35,66 @@ export default function Sidebar({ isOpen, toggleSidebar, user }: SidebarProps) {
   return (
     <aside 
       id="sidebar" 
-      className={`w-64 bg-neutral-800 text-white fixed inset-y-0 left-0 transform ${
+      className={`w-64 bg-white border-r border-gray-200 fixed inset-y-0 left-0 transform ${
         isOpen ? "translate-x-0" : "-translate-x-full"
       } md:translate-x-0 transition duration-200 ease-in-out z-30`}
     >
-      <div className="p-4 border-b border-neutral-700">
+      <div className="p-4 border-b border-gray-200">
         <div className="flex items-center space-x-2">
           <i className="fas fa-truck text-primary text-2xl"></i>
-          <h1 className="text-xl font-bold">Driver Dashboard</h1>
+          <h1 className="text-xl font-bold text-gray-800">Driver Dashboard</h1>
         </div>
       </div>
       
-      <div className="p-4 border-b border-neutral-700">
+      <div className="p-4 border-b border-gray-200">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
+          <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center">
             <span className="font-bold text-lg">{getInitials()}</span>
           </div>
           <div>
-            <h3 className="font-medium">{user?.name || "User"}</h3>
-            <p className="text-sm text-neutral-400">ID: {user?.driverId || "Unknown"}</p>
+            <h3 className="font-medium text-gray-800">{user?.name || "User"}</h3>
+            <p className="text-sm text-gray-500">ID: {user?.driverId || "Unknown"}</p>
           </div>
         </div>
       </div>
       
       <nav className="mt-2">
-        <a href="#" className="flex items-center py-3 px-4 text-neutral-300 hover:bg-neutral-700 hover:text-white">
-          <i className="fas fa-tachometer-alt w-6"></i>
+        <a href="#" className="flex items-center py-3 px-4 text-gray-600 hover:bg-gray-100">
+          <i className="fas fa-tachometer-alt w-6 text-gray-500"></i>
           <span>Dashboard</span>
         </a>
-        <a href="#" className="flex items-center py-3 px-4 bg-neutral-700 text-white">
-          <i className="fas fa-route w-6"></i>
+        <a href="#" className="flex items-center py-3 px-4 bg-gray-100 text-primary font-medium">
+          <i className="fas fa-route w-6 text-primary"></i>
           <span>Route Planning</span>
         </a>
-        <a href="#" className="flex items-center py-3 px-4 text-neutral-300 hover:bg-neutral-700 hover:text-white">
-          <i className="fas fa-calendar-alt w-6"></i>
+        <a href="#" className="flex items-center py-3 px-4 text-gray-600 hover:bg-gray-100">
+          <i className="fas fa-calendar-alt w-6 text-gray-500"></i>
           <span>Schedule</span>
         </a>
-        <a href="#" className="flex items-center py-3 px-4 text-neutral-300 hover:bg-neutral-700 hover:text-white">
-          <i className="fas fa-boxes w-6"></i>
+        <a href="#" className="flex items-center py-3 px-4 text-gray-600 hover:bg-gray-100">
+          <i className="fas fa-boxes w-6 text-gray-500"></i>
           <span>Inventory</span>
         </a>
-        <a href="#" className="flex items-center py-3 px-4 text-neutral-300 hover:bg-neutral-700 hover:text-white">
-          <i className="fas fa-gas-pump w-6"></i>
+        <a href="#" className="flex items-center py-3 px-4 text-gray-600 hover:bg-gray-100">
+          <i className="fas fa-gas-pump w-6 text-gray-500"></i>
           <span>Fuel & Rest Stops</span>
         </a>
-        <a href="#" className="flex items-center py-3 px-4 text-neutral-300 hover:bg-neutral-700 hover:text-white">
-          <i className="fas fa-file-alt w-6"></i>
+        <a href="#" className="flex items-center py-3 px-4 text-gray-600 hover:bg-gray-100">
+          <i className="fas fa-file-alt w-6 text-gray-500"></i>
           <span>Reports</span>
         </a>
-        <a href="#" className="flex items-center py-3 px-4 text-neutral-300 hover:bg-neutral-700 hover:text-white">
-          <i className="fas fa-cog w-6"></i>
+        <a href="#" className="flex items-center py-3 px-4 text-gray-600 hover:bg-gray-100">
+          <i className="fas fa-cog w-6 text-gray-500"></i>
           <span>Settings</span>
         </a>
       </nav>
       
-      <div className="absolute bottom-0 w-full p-4 border-t border-neutral-700">
+      <div className="absolute bottom-0 w-full p-4 border-t border-gray-200">
         <button 
           onClick={handleLogout}
-          className="flex items-center text-neutral-300 hover:text-white w-full"
+          className="flex items-center text-gray-600 hover:text-gray-900 w-full"
         >
-          <i className="fas fa-sign-out-alt w-6"></i>
+          <i className="fas fa-sign-out-alt w-6 text-gray-500"></i>
           <span>Logout</span>
         </button>
       </div>
