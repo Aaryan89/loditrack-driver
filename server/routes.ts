@@ -1,457 +1,310 @@
-import type { Express, Request, Response } from "express";
+import express, { type Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import session from "express-session";
+import MemoryStore from "memorystore";
+import passport from "passport";
+import { Strategy as LocalStrategy } from "passport-local";
 import { z } from "zod";
 import { 
-  insertUserSchema, 
   insertInventoryItemSchema, 
-  insertDeliverySchema, 
-  insertRouteSchema,
-  insertStationSchema,
-  insertCalendarEventSchema
+  insertDeliveryStopSchema, 
+  insertRouteSchema, 
+  insertStopSchema, 
+  insertScheduleEntrySchema
 } from "@shared/schema";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Initialize Google Generative AI for Gemini
-  const genAI = process.env.GEMINI_API_KEY 
-    ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) 
-    : null;
-
-  // Set up API routes - all routes are prefixed with /api
-
-  // Authentication routes
-  app.post("/api/auth/login", async (req: Request, res: Response) => {
+  // Session setup
+  const MemoryStoreSession = MemoryStore(session);
+  app.use(
+    session({
+      secret: process.env.SESSION_SECRET || "truck-tracking-secret",
+      resave: false,
+      saveUninitialized: false,
+      cookie: { secure: process.env.NODE_ENV === "production" },
+      store: new MemoryStoreSession({
+        checkPeriod: 86400000, // 24 hours
+      }),
+    })
+  );
+  
+  // Passport authentication setup
+  app.use(passport.initialize());
+  app.use(passport.session());
+  
+  passport.use(
+    new LocalStrategy(async (username, password, done) => {
+      try {
+        const user = await storage.getUserByUsername(username);
+        if (!user) {
+          return done(null, false, { message: "Incorrect username." });
+        }
+        if (user.password !== password) {
+          return done(null, false, { message: "Incorrect password." });
+        }
+        return done(null, user);
+      } catch (err) {
+        return done(err);
+      }
+    })
+  );
+  
+  passport.serializeUser((user: any, done) => {
+    done(null, user.id);
+  });
+  
+  passport.deserializeUser(async (id: number, done) => {
     try {
-      const { username, password } = req.body;
-      
-      if (!username || !password) {
-        return res.status(400).json({ message: "Username and password are required" });
-      }
-      
-      const user = await storage.getUserByUsername(username);
-      
-      if (!user || user.password !== password) {
-        return res.status(401).json({ message: "Invalid username or password" });
-      }
-      
-      // Remove password before sending the user data
-      const { password: _, ...userWithoutPassword } = user;
-      
-      res.status(200).json({
-        user: userWithoutPassword,
-        message: "Login successful"
+      const user = await storage.getUser(id);
+      done(null, user);
+    } catch (err) {
+      done(err);
+    }
+  });
+  
+  // API Endpoints
+  const apiRouter = express.Router();
+  app.use("/api", apiRouter);
+  
+  // Auth endpoints
+  apiRouter.post("/login", passport.authenticate("local"), (req, res) => {
+    res.json(req.user);
+  });
+  
+  apiRouter.post("/logout", (req, res) => {
+    req.logout(() => {
+      res.json({ success: true });
+    });
+  });
+  
+  apiRouter.get("/me", (req, res) => {
+    if (!req.user) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+    res.json(req.user);
+  });
+  
+  // Middleware to check if user is authenticated
+  const isAuthenticated = (req: Request, res: Response, next: Function) => {
+    if (req.isAuthenticated()) {
+      return next();
+    }
+    res.status(401).json({ error: "Not authenticated" });
+  };
+  
+  // Inventory endpoints
+  apiRouter.get("/inventory", isAuthenticated, async (req, res) => {
+    const userId = (req.user as any).id;
+    const items = await storage.getInventoryItems(userId);
+    res.json(items);
+  });
+  
+  apiRouter.post("/inventory", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const validatedData = insertInventoryItemSchema.parse({
+        ...req.body,
+        userId,
       });
-    } catch (error) {
-      console.error("Login error:", error);
-      res.status(500).json({ message: "Server error during login" });
-    }
-  });
-
-  // Inventory routes
-  app.get("/api/inventory", async (req: Request, res: Response) => {
-    try {
-      const items = await storage.getInventoryItems();
-      res.status(200).json(items);
-    } catch (error) {
-      console.error("Error fetching inventory:", error);
-      res.status(500).json({ message: "Failed to fetch inventory items" });
-    }
-  });
-
-  app.get("/api/inventory/:id", async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-      const item = await storage.getInventoryItem(id);
       
-      if (!item) {
-        return res.status(404).json({ message: "Inventory item not found" });
-      }
-      
-      res.status(200).json(item);
-    } catch (error) {
-      console.error(`Error fetching inventory item ${req.params.id}:`, error);
-      res.status(500).json({ message: "Failed to fetch inventory item" });
-    }
-  });
-
-  app.post("/api/inventory", async (req: Request, res: Response) => {
-    try {
-      const validatedData = insertInventoryItemSchema.parse(req.body);
       const newItem = await storage.createInventoryItem(validatedData);
       res.status(201).json(newItem);
     } catch (error) {
-      console.error("Error creating inventory item:", error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid inventory item data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to create inventory item" });
+      res.status(400).json({ error: (error as any).message });
     }
   });
-
-  app.put("/api/inventory/:id", async (req: Request, res: Response) => {
+  
+  apiRouter.put("/inventory/:id", isAuthenticated, async (req, res) => {
     try {
+      const userId = (req.user as any).id;
       const id = parseInt(req.params.id);
-      const validatedData = insertInventoryItemSchema.partial().parse(req.body);
+      
+      const item = await storage.getInventoryItem(id);
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+      
+      if (item.userId !== userId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const validatedData = z.object({
+        name: z.string().optional(),
+        quantity: z.number().optional(),
+        location: z.string().optional(),
+        deadline: z.string().optional(),
+      }).parse(req.body);
       
       const updatedItem = await storage.updateInventoryItem(id, validatedData);
-      
-      if (!updatedItem) {
-        return res.status(404).json({ message: "Inventory item not found" });
-      }
-      
-      res.status(200).json(updatedItem);
+      res.json(updatedItem);
     } catch (error) {
-      console.error(`Error updating inventory item ${req.params.id}:`, error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid inventory item data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to update inventory item" });
+      res.status(400).json({ error: (error as any).message });
     }
   });
-
-  app.delete("/api/inventory/:id", async (req: Request, res: Response) => {
+  
+  apiRouter.delete("/inventory/:id", isAuthenticated, async (req, res) => {
     try {
+      const userId = (req.user as any).id;
       const id = parseInt(req.params.id);
-      const success = await storage.deleteInventoryItem(id);
       
-      if (!success) {
-        return res.status(404).json({ message: "Inventory item not found" });
+      const item = await storage.getInventoryItem(id);
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
       }
       
+      if (item.userId !== userId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      await storage.deleteInventoryItem(id);
       res.status(204).send();
     } catch (error) {
-      console.error(`Error deleting inventory item ${req.params.id}:`, error);
-      res.status(500).json({ message: "Failed to delete inventory item" });
+      res.status(400).json({ error: (error as any).message });
     }
   });
-
-  // Delivery routes
-  app.get("/api/deliveries", async (req: Request, res: Response) => {
-    try {
-      const { status, driverId, date } = req.query;
-      
-      let deliveries;
-      
-      if (status) {
-        deliveries = await storage.getDeliveriesByStatus(status as string);
-      } else if (driverId) {
-        deliveries = await storage.getDeliveriesByDriver(parseInt(driverId as string));
-      } else if (date) {
-        deliveries = await storage.getDeliveriesByDate(new Date(date as string));
-      } else {
-        deliveries = await storage.getDeliveries();
-      }
-      
-      res.status(200).json(deliveries);
-    } catch (error) {
-      console.error("Error fetching deliveries:", error);
-      res.status(500).json({ message: "Failed to fetch deliveries" });
-    }
+  
+  // Routes endpoints
+  apiRouter.get("/routes", isAuthenticated, async (req, res) => {
+    const userId = (req.user as any).id;
+    const routes = await storage.getRoutes(userId);
+    res.json(routes);
   });
-
-  app.get("/api/deliveries/:id", async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-      const delivery = await storage.getDelivery(id);
-      
-      if (!delivery) {
-        return res.status(404).json({ message: "Delivery not found" });
-      }
-      
-      res.status(200).json(delivery);
-    } catch (error) {
-      console.error(`Error fetching delivery ${req.params.id}:`, error);
-      res.status(500).json({ message: "Failed to fetch delivery" });
+  
+  apiRouter.get("/routes/current", isAuthenticated, async (req, res) => {
+    const userId = (req.user as any).id;
+    const currentRoute = await storage.getCurrentRoute(userId);
+    
+    if (!currentRoute) {
+      return res.status(404).json({ error: "No current route found" });
     }
+    
+    res.json(currentRoute);
   });
-
-  app.post("/api/deliveries", async (req: Request, res: Response) => {
+  
+  apiRouter.post("/routes", isAuthenticated, async (req, res) => {
     try {
-      const validatedData = insertDeliverySchema.parse(req.body);
-      const newDelivery = await storage.createDelivery(validatedData);
-      res.status(201).json(newDelivery);
-    } catch (error) {
-      console.error("Error creating delivery:", error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid delivery data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to create delivery" });
-    }
-  });
-
-  app.put("/api/deliveries/:id", async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-      const validatedData = insertDeliverySchema.partial().parse(req.body);
+      const userId = (req.user as any).id;
+      const validatedData = insertRouteSchema.parse({
+        ...req.body,
+        userId,
+      });
       
-      const updatedDelivery = await storage.updateDelivery(id, validatedData);
-      
-      if (!updatedDelivery) {
-        return res.status(404).json({ message: "Delivery not found" });
-      }
-      
-      res.status(200).json(updatedDelivery);
-    } catch (error) {
-      console.error(`Error updating delivery ${req.params.id}:`, error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid delivery data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to update delivery" });
-    }
-  });
-
-  app.delete("/api/deliveries/:id", async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-      const success = await storage.deleteDelivery(id);
-      
-      if (!success) {
-        return res.status(404).json({ message: "Delivery not found" });
-      }
-      
-      res.status(204).send();
-    } catch (error) {
-      console.error(`Error deleting delivery ${req.params.id}:`, error);
-      res.status(500).json({ message: "Failed to delete delivery" });
-    }
-  });
-
-  // Route optimization routes
-  app.get("/api/routes", async (req: Request, res: Response) => {
-    try {
-      const { driverId, date } = req.query;
-      
-      let routes;
-      
-      if (driverId) {
-        routes = await storage.getRoutesByDriver(parseInt(driverId as string));
-      } else if (date) {
-        routes = await storage.getRoutesByDate(new Date(date as string));
-      } else {
-        routes = await storage.getRoutes();
-      }
-      
-      res.status(200).json(routes);
-    } catch (error) {
-      console.error("Error fetching routes:", error);
-      res.status(500).json({ message: "Failed to fetch routes" });
-    }
-  });
-
-  app.get("/api/routes/:id", async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-      const route = await storage.getRoute(id);
-      
-      if (!route) {
-        return res.status(404).json({ message: "Route not found" });
-      }
-      
-      res.status(200).json(route);
-    } catch (error) {
-      console.error(`Error fetching route ${req.params.id}:`, error);
-      res.status(500).json({ message: "Failed to fetch route" });
-    }
-  });
-
-  app.post("/api/routes", async (req: Request, res: Response) => {
-    try {
-      const validatedData = insertRouteSchema.parse(req.body);
       const newRoute = await storage.createRoute(validatedData);
       res.status(201).json(newRoute);
     } catch (error) {
-      console.error("Error creating route:", error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid route data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to create route" });
+      res.status(400).json({ error: (error as any).message });
     }
   });
-
-  app.post("/api/routes/optimize", async (req: Request, res: Response) => {
+  
+  // Delivery stops endpoints
+  apiRouter.get("/routes/:routeId/stops", isAuthenticated, async (req, res) => {
     try {
-      if (!genAI) {
-        return res.status(503).json({ message: "Gemini API key not configured" });
-      }
-
-      const { deliveries, startLocation, preferences } = req.body;
-      
-      if (!deliveries || !Array.isArray(deliveries) || deliveries.length === 0) {
-        return res.status(400).json({ message: "Deliveries are required" });
-      }
-      
-      if (!startLocation || !startLocation.lat || !startLocation.lng) {
-        return res.status(400).json({ message: "Valid start location is required" });
-      }
-      
-      // Use Gemini API to optimize the route
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
-      
-      const prompt = `
-        I need to optimize a delivery route for a truck driver. 
-        Start location: ${JSON.stringify(startLocation)}.
-        Deliveries to make: ${JSON.stringify(deliveries)}.
-        ${preferences ? `Driver preferences: ${JSON.stringify(preferences)}.` : ''}
-        
-        Please provide:
-        1. The optimal order of deliveries to minimize total distance and time
-        2. Estimated total distance in kilometers
-        3. Estimated total duration in minutes
-        4. Recommended rest or fuel stops along the route
-        5. Any other suggestions to improve efficiency
-        
-        Format your response as a valid JSON object with the following structure:
-        {
-          "optimizedRoute": [ordered delivery IDs],
-          "estimatedDistance": number,
-          "estimatedDuration": number,
-          "recommendedStops": [
-            { "type": "fuel|rest", "afterDeliveryId": number, "location": { "lat": number, "lng": number }, "reason": "string" }
-          ],
-          "suggestions": "string with additional suggestions"
-        }
-      `;
-      
-      const result = await model.generateContent(prompt);
-      const response = result.response;
-      const textResponse = response.text();
-      
-      // Extract the JSON from the text response
-      const jsonMatch = textResponse.match(/```json\n([\s\S]*?)\n```/) || 
-                       textResponse.match(/{[\s\S]*}/);
-                       
-      if (!jsonMatch) {
-        return res.status(500).json({ 
-          message: "Failed to parse Gemini API response",
-          rawResponse: textResponse
-        });
-      }
-      
-      const optimizationResult = JSON.parse(jsonMatch[0].replace(/```json\n|```/g, ''));
-      
-      res.status(200).json(optimizationResult);
+      const routeId = parseInt(req.params.routeId);
+      const stops = await storage.getDeliveryStops(routeId);
+      res.json(stops);
     } catch (error) {
-      console.error("Error optimizing route:", error);
-      res.status(500).json({ message: "Failed to optimize route" });
+      res.status(400).json({ error: (error as any).message });
     }
   });
-
-  // Station routes
-  app.get("/api/stations", async (req: Request, res: Response) => {
+  
+  apiRouter.post("/routes/:routeId/stops", isAuthenticated, async (req, res) => {
     try {
-      const { lat, lng, radius } = req.query;
+      const routeId = parseInt(req.params.routeId);
+      const validatedData = insertDeliveryStopSchema.parse({
+        ...req.body,
+        routeId,
+      });
       
-      let stations;
-      
-      if (lat && lng && radius) {
-        stations = await storage.getNearbyStations(
-          parseFloat(lat as string),
-          parseFloat(lng as string),
-          parseFloat(radius as string)
-        );
-      } else {
-        stations = await storage.getStations();
-      }
-      
-      res.status(200).json(stations);
+      const newStop = await storage.createDeliveryStop(validatedData);
+      res.status(201).json(newStop);
     } catch (error) {
-      console.error("Error fetching stations:", error);
-      res.status(500).json({ message: "Failed to fetch stations" });
+      res.status(400).json({ error: (error as any).message });
     }
   });
-
-  app.post("/api/stations", async (req: Request, res: Response) => {
+  
+  // Rest/fuel stops endpoints
+  apiRouter.get("/routes/:routeId/rest-stops", isAuthenticated, async (req, res) => {
     try {
-      const validatedData = insertStationSchema.parse(req.body);
-      const newStation = await storage.createStation(validatedData);
-      res.status(201).json(newStation);
+      const routeId = parseInt(req.params.routeId);
+      const stops = await storage.getStops(routeId);
+      res.json(stops);
     } catch (error) {
-      console.error("Error creating station:", error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid station data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to create station" });
+      res.status(400).json({ error: (error as any).message });
     }
   });
-
-  // Calendar event routes
-  app.get("/api/calendar", async (req: Request, res: Response) => {
+  
+  apiRouter.post("/routes/:routeId/rest-stops", isAuthenticated, async (req, res) => {
     try {
-      const { driverId, start, end } = req.query;
+      const routeId = parseInt(req.params.routeId);
+      const validatedData = insertStopSchema.parse({
+        ...req.body,
+        routeId,
+      });
       
-      let events;
-      
-      if (driverId) {
-        events = await storage.getCalendarEventsByDriver(parseInt(driverId as string));
-      } else if (start && end) {
-        events = await storage.getCalendarEventsByDateRange(
-          new Date(start as string),
-          new Date(end as string)
-        );
-      } else {
-        events = await storage.getCalendarEvents();
-      }
-      
-      res.status(200).json(events);
+      const newStop = await storage.createStop(validatedData);
+      res.status(201).json(newStop);
     } catch (error) {
-      console.error("Error fetching calendar events:", error);
-      res.status(500).json({ message: "Failed to fetch calendar events" });
+      res.status(400).json({ error: (error as any).message });
     }
   });
-
-  app.post("/api/calendar", async (req: Request, res: Response) => {
+  
+  // Schedule endpoints
+  apiRouter.get("/schedule", isAuthenticated, async (req, res) => {
+    const userId = (req.user as any).id;
+    const entries = await storage.getScheduleEntries(userId);
+    res.json(entries);
+  });
+  
+  apiRouter.post("/schedule", isAuthenticated, async (req, res) => {
     try {
-      const validatedData = insertCalendarEventSchema.parse(req.body);
-      const newEvent = await storage.createCalendarEvent(validatedData);
-      res.status(201).json(newEvent);
+      const userId = (req.user as any).id;
+      const validatedData = insertScheduleEntrySchema.parse({
+        ...req.body,
+        userId,
+      });
+      
+      const newEntry = await storage.createScheduleEntry(validatedData);
+      res.status(201).json(newEntry);
     } catch (error) {
-      console.error("Error creating calendar event:", error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid calendar event data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to create calendar event" });
+      res.status(400).json({ error: (error as any).message });
     }
   });
-
-  app.put("/api/calendar/:id", async (req: Request, res: Response) => {
+  
+  apiRouter.delete("/schedule/:id", isAuthenticated, async (req, res) => {
     try {
+      const userId = (req.user as any).id;
       const id = parseInt(req.params.id);
-      const validatedData = insertCalendarEventSchema.partial().parse(req.body);
       
-      const updatedEvent = await storage.updateCalendarEvent(id, validatedData);
-      
-      if (!updatedEvent) {
-        return res.status(404).json({ message: "Calendar event not found" });
+      const entry = await storage.getScheduleEntry(id);
+      if (!entry) {
+        return res.status(404).json({ error: "Schedule entry not found" });
       }
       
-      res.status(200).json(updatedEvent);
-    } catch (error) {
-      console.error(`Error updating calendar event ${req.params.id}:`, error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid calendar event data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to update calendar event" });
-    }
-  });
-
-  app.delete("/api/calendar/:id", async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-      const success = await storage.deleteCalendarEvent(id);
-      
-      if (!success) {
-        return res.status(404).json({ message: "Calendar event not found" });
+      if (entry.userId !== userId) {
+        return res.status(403).json({ error: "Forbidden" });
       }
       
+      await storage.deleteScheduleEntry(id);
       res.status(204).send();
     } catch (error) {
-      console.error(`Error deleting calendar event ${req.params.id}:`, error);
-      res.status(500).json({ message: "Failed to delete calendar event" });
+      res.status(400).json({ error: (error as any).message });
     }
   });
+  
+  // Google API endpoints - these would typically call the Gemini API
+  // for optimization, but for now, they'll return mock data
+  apiRouter.get("/optimize-route", isAuthenticated, async (req, res) => {
+    res.json({
+      recommendations: [
+        "Consider taking alternate route via Oak Street to avoid construction on Market Street",
+        "Rearrange stops #4 and #5 to save approximately 15 minutes due to traffic patterns",
+        "Schedule a 30-minute rest at the truck stop on Howard Street after your 4th delivery",
+        "Weather alert: Light rain expected after 4PM - plan accordingly for final deliveries",
+      ]
+    });
+  });
 
-  // Create HTTP server
   const httpServer = createServer(app);
   return httpServer;
 }

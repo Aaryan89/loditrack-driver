@@ -1,120 +1,93 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Truck } from "lucide-react";
-import { useAuthContext } from "@/context/AuthContext";
-import { useLocation } from "wouter";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { apiRequest } from "@/lib/queryClient";
 
-// Define login form schema
-const loginSchema = z.object({
-  username: z.string().min(1, { message: "Username is required" }),
-  password: z.string().min(1, { message: "Password is required" }),
-});
-
-const Login = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuthContext();
+export default function Login() {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
 
-  // Initialize login form
-  const form = useForm<z.infer<typeof loginSchema>>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      username: "",
-      password: "",
-    },
-  });
-
-  // Handle form submission
-  const onSubmit = async (values: z.infer<typeof loginSchema>) => {
-    setIsLoading(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!username || !password) {
+      toast({
+        title: "Error",
+        description: "Please enter both username and password",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setLoading(true);
     
     try {
-      const success = await login(values.username, values.password);
-      
-      if (success) {
-        setLocation("/");
-      }
+      await apiRequest("POST", "/api/login", { username, password });
+      setLocation("/");
+    } catch (error) {
+      toast({
+        title: "Login Failed",
+        description: "Invalid username or password",
+        variant: "destructive",
+      });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-neutral-100 p-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 flex flex-col items-center">
-          <div className="h-12 w-12 rounded-full bg-[#1a73e8] text-white flex items-center justify-center mb-4">
-            <Truck className="h-6 w-6" />
+        <CardHeader className="space-y-1">
+          <div className="flex items-center space-x-2 mb-2">
+            <i className="fas fa-truck text-primary text-2xl"></i>
+            <CardTitle className="text-2xl">TruckTrack</CardTitle>
           </div>
-          <CardTitle className="text-2xl font-bold text-center">TruckLogistics</CardTitle>
-          <p className="text-sm text-gray-600 text-center">
-            Sign in to your driver account
-          </p>
+          <CardDescription>
+            Enter your credentials to access your driver dashboard
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="username"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Username</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter your username" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <Button 
-                type="submit" 
-                className="w-full bg-[#1a73e8] hover:bg-[#1a68d8] text-white"
-                disabled={isLoading}
-              >
-                {isLoading ? "Signing in..." : "Sign In"}
+          <form onSubmit={handleSubmit}>
+            <div className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="username">Username</Label>
+                <Input
+                  id="username"
+                  placeholder="demo"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+              <Button type="submit" disabled={loading} className="w-full">
+                {loading ? "Logging in..." : "Login"}
               </Button>
-            </form>
-          </Form>
-        </CardContent>
-        <CardFooter className="border-t border-gray-200 px-6 py-4">
-          <div className="flex flex-col w-full text-center">
-            <p className="text-sm text-gray-600 mb-2">Demo Credentials:</p>
-            <p className="text-xs text-gray-500">Username: <span className="font-medium">john.driver</span></p>
-            <p className="text-xs text-gray-500">Password: <span className="font-medium">password123</span></p>
+            </div>
+          </form>
+          <div className="mt-4 text-sm text-center text-neutral-600">
+            Demo credentials: username "demo" / password "password"
           </div>
-        </CardFooter>
+        </CardContent>
       </Card>
     </div>
   );
-};
-
-export default Login;
+}

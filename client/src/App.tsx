@@ -1,53 +1,42 @@
-import { Switch, Route, Redirect, useLocation } from "wouter";
-import { queryClient } from "./lib/queryClient";
+import { Switch, Route, useLocation } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
-import NotFound from "@/pages/not-found";
-import Dashboard from "@/pages/Dashboard";
 import Login from "@/pages/Login";
-import Inventory from "@/pages/Inventory";
-import Calendar from "@/pages/Calendar";
-import Routes from "@/pages/Routes";
-import Stations from "@/pages/Stations";
-import Settings from "@/pages/Settings";
-import { useAuthContext } from "./context/AuthContext";
-import { useEffect } from "react";
-
-function ProtectedRoute({ component: Component, ...rest }: { component: React.ComponentType<any>, path?: string }) {
-  const { isAuthenticated } = useAuthContext();
-  const [location, setLocation] = useLocation();
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      setLocation("/login");
-    }
-  }, [isAuthenticated, setLocation]);
-
-  if (!isAuthenticated) {
-    return null;
-  }
-
-  return <Component {...rest} />;
-}
+import Dashboard from "@/pages/Dashboard";
+import NotFound from "@/pages/not-found";
+import { useEffect, useState } from "react";
+import { apiRequest } from "./lib/queryClient";
 
 function Router() {
-  const { isAuthenticated } = useAuthContext();
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
+  const [authenticated, setAuthenticated] = useState<boolean | null>(null);
 
-  // Redirect to dashboard if authenticated and trying to access login
-  if (isAuthenticated && location === "/login") {
-    return <Redirect to="/" />;
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        await apiRequest("GET", "/api/me");
+        setAuthenticated(true);
+      } catch (error) {
+        setAuthenticated(false);
+        if (location !== "/") {
+          setLocation("/");
+        }
+      }
+    };
+    
+    checkAuth();
+  }, [location, setLocation]);
+
+  if (authenticated === null) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
 
   return (
     <Switch>
-      <Route path="/login" component={Login} />
-      <Route path="/" component={() => <ProtectedRoute component={Dashboard} />} />
-      <Route path="/inventory" component={() => <ProtectedRoute component={Inventory} />} />
-      <Route path="/calendar" component={() => <ProtectedRoute component={Calendar} />} />
-      <Route path="/routes" component={() => <ProtectedRoute component={Routes} />} />
-      <Route path="/stations" component={() => <ProtectedRoute component={Stations} />} />
-      <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
+      <Route path="/">
+        {authenticated ? <Dashboard /> : <Login />}
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );

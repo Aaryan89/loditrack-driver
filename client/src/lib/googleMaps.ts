@@ -2,7 +2,7 @@
 
 // Initialize the map with provided API key
 const initializeMap = (elementId: string): Promise<google.maps.Map> => {
-  const apiKey = process.env.VITE_GOOGLE_MAPS_API_KEY || 'missing-api-key';
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'missing-api-key';
   
   return new Promise((resolve, reject) => {
     // First check if Google Maps script is already loaded
