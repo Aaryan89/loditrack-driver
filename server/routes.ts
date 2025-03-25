@@ -78,41 +78,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
   
-  apiRouter.get("/me", (req, res) => {
-    if (!req.user) {
-      return res.status(401).json({ error: "Not authenticated" });
+  apiRouter.get("/me", async (req, res) => {
+    // For demo purposes, always return the demo user
+    let demoUser = await storage.getUserByUsername("demo");
+    
+    if (!demoUser) {
+      demoUser = await storage.createUser({
+        username: "demo",
+        password: "demo123",
+        name: "Demo Driver",
+        driverId: "DRV-001",
+        profileImage: null,
+        isActive: true
+      });
     }
-    res.json(req.user);
+    
+    // If we have a demo user in session, use that, otherwise return the demo user
+    if (req.user) {
+      res.json(req.user);
+    } else {
+      res.json(demoUser);
+    }
   });
   
-  // Middleware to check if user is authenticated
-  // For demo purposes, we'll automatically authenticate the user with a demo account
+  // Demo middleware - for demo purposes only, we'll use a demo user for all requests
   const isAuthenticated = async (req: Request, res: Response, next: Function) => {
-    if (!req.user) {
-      // Get or create the demo user
-      let demoUser = await storage.getUserByUsername("demo");
-      
-      if (!demoUser) {
-        demoUser = await storage.createUser({
-          username: "demo",
-          password: "demo123",
-          name: "Demo Driver",
-          driverId: "DRV-001",
-          profileImage: null,
-          isActive: true
-        });
-      }
-      
-      // Manually authenticate the user
-      req.login(demoUser, (err) => {
-        if (err) {
-          return res.status(500).json({ error: "Authentication error" });
-        }
-        return next();
+    // Get or create the demo user
+    let demoUser = await storage.getUserByUsername("demo");
+    
+    if (!demoUser) {
+      demoUser = await storage.createUser({
+        username: "demo",
+        password: "demo123",
+        name: "Demo Driver",
+        driverId: "DRV-001",
+        profileImage: null,
+        isActive: true
       });
-    } else {
-      return next();
     }
+    
+    // Add the demo user to the request
+    if (!req.user) {
+      (req as any).user = demoUser;
+    }
+    
+    // Continue with the request
+    return next();
   };
   
   // Inventory endpoints
