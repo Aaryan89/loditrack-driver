@@ -136,7 +136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.post("/inventory", isAuthenticated, async (req, res) => {
     try {
       const userId = (req.user as any).id;
-      const validatedData = insertInventoryItemSchema.parse({
+      const validatedData = insertInventoryItemSchemaForApi.parse({
         ...req.body,
         userId,
       });
@@ -244,7 +244,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.post("/routes/:routeId/stops", isAuthenticated, async (req, res) => {
     try {
       const routeId = parseInt(req.params.routeId);
-      const validatedData = insertDeliveryStopSchema.parse({
+      const validatedData = insertDeliveryStopSchemaForApi.parse({
         ...req.body,
         routeId,
       });

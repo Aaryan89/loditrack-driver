@@ -85,25 +85,13 @@ export const insertUserSchema = createInsertSchema(users).pick({
   isActive: true,
 });
 
-export const insertInventoryItemSchema = createInsertSchema(inventoryItems).pick({
-  name: true,
-  category: true,
-  quantity: true,
-  weight: true,
-  location: true,
-  deadline: true,
-  userId: true,
-});
+export const insertInventoryItemSchema = createInsertSchema(inventoryItems);
+// Use omit to exclude id since it's auto-generated
+export const insertInventoryItemSchemaForApi = insertInventoryItemSchema.omit({ id: true });
 
-export const insertDeliveryStopSchema = createInsertSchema(deliveryStops).pick({
-  name: true,
-  address: true,
-  coordinates: true,
-  scheduledTime: true,
-  status: true,
-  items: true,
-  routeId: true,
-});
+export const insertDeliveryStopSchema = createInsertSchema(deliveryStops);
+// Use omit to exclude id since it's auto-generated
+export const insertDeliveryStopSchemaForApi = insertDeliveryStopSchema.omit({ id: true });
 
 export const insertRouteSchema = createInsertSchema(routes).pick({
   name: true,
